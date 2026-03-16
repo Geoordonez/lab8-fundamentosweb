@@ -1,90 +1,54 @@
-// =============================================================================
-// PÁGINA: HOME - Real Estate React
-// =============================================================================
-// Página principal que muestra la lista de propiedades con filtros.
-//
-// ## Gestión de Estado en React 19
-// Usamos useState para el estado local de filtros y propiedades.
-// En aplicaciones más grandes, consideraríamos:
-// - Context API para estado compartido
-// - Zustand/Jotai para estado global simple
-// - TanStack Query para datos del servidor
-// =============================================================================
-
 import type React from 'react';
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Search, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+
+// RUTAS RELATIVAS: Aseguran que el compilador encuentre los archivos
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { PropertyCard } from '@/components/PropertyCard';
-import { filterProperties, deleteProperty, initializeWithSampleData } from '@/lib/storage';
-import type { Property, PropertyFilters } from '@/types/property';
+} from '../components/ui/select';
+import { PropertyCard } from '../components/PropertyCard';
+import { filterProperties, deleteProperty, initializeWithSampleData } from '../lib/storage';
+import type { Property, PropertyFilters } from '../types/property';
 import {
   PROPERTY_TYPES,
   OPERATION_TYPES,
   PROPERTY_TYPE_LABELS,
   OPERATION_TYPE_LABELS,
-} from '@/types/property';
+} from '../types/property';
 
-/**
- * Página principal con lista de propiedades y filtros.
- */
-export function HomePage(): React.ReactElement {
-  // =========================================================================
-  // ESTADO
-  // =========================================================================
-  // - properties: Lista de propiedades filtradas
-  // - filters: Criterios de búsqueda actuales
-  // =========================================================================
+interface HomePageProps {
+  compareIds: string[];
+  onToggleCompare: (id: string) => void;
+}
+
+export function HomePage({ compareIds, onToggleCompare }: HomePageProps): React.ReactElement {
   const [properties, setProperties] = useState<Property[]>([]);
   const [filters, setFilters] = useState<PropertyFilters>({});
 
-  // =========================================================================
-  // CARGAR PROPIEDADES
-  // =========================================================================
-  // useCallback memoriza la función para evitar recrearla en cada render.
-  // Esto es importante cuando la función se pasa como dependencia de useEffect.
-  // =========================================================================
+  // Memorizamos la carga para evitar bucles infinitos
   const loadProperties = useCallback(() => {
-    const filtered = filterProperties(filters);
-    setProperties(filtered);
+    try {
+      const filtered = filterProperties(filters);
+      setProperties(filtered || []); // Evitamos que sea null
+    } catch (error) {
+      console.error("Error cargando propiedades:", error);
+      setProperties([]);
+    }
   }, [filters]);
 
-  // =========================================================================
-  // EFECTOS
-  // =========================================================================
-  // useEffect ejecuta código después del render.
-  // Aquí lo usamos para:
-  // 1. Inicializar datos de ejemplo si no hay datos
-  // 2. Cargar propiedades cuando cambian los filtros
-  // =========================================================================
+  // Inicialización única al montar el componente
   useEffect(() => {
-    // Inicializar con datos de ejemplo si está vacío
     initializeWithSampleData();
-
-    // Pequeño delay para asegurar que los datos se cargaron
-    const timer = setTimeout(() => {
-      loadProperties();
-    }, 100);
-
-    return () => clearTimeout(timer);
+    loadProperties();
   }, [loadProperties]);
 
-  // =========================================================================
-  // HANDLERS
-  // =========================================================================
-
-  /**
-   * Actualiza un filtro específico.
-   */
   const handleFilterChange = (key: keyof PropertyFilters, value: string | number): void => {
     setFilters((prev) => ({
       ...prev,
@@ -92,16 +56,10 @@ export function HomePage(): React.ReactElement {
     }));
   };
 
-  /**
-   * Limpia todos los filtros.
-   */
   const handleClearFilters = (): void => {
     setFilters({});
   };
 
-  /**
-   * Elimina una propiedad.
-   */
   const handleDelete = (id: string): void => {
     if (window.confirm('¿Estás seguro de eliminar esta propiedad?')) {
       deleteProperty(id);
@@ -109,14 +67,13 @@ export function HomePage(): React.ReactElement {
     }
   };
 
-  // Verificamos si hay filtros activos
   const hasFilters = Object.values(filters).some(
     (v) => v !== undefined && v !== '' && v !== 0
   );
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Header */}
+      {/* Header con contador dinámico */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold">Propiedades Disponibles</h1>
@@ -133,10 +90,9 @@ export function HomePage(): React.ReactElement {
         </Button>
       </div>
 
-      {/* Filtros */}
+      {/* Panel de Filtros */}
       <div className="bg-card rounded-lg border p-4 mb-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Búsqueda por texto */}
           <div className="relative lg:col-span-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -147,7 +103,6 @@ export function HomePage(): React.ReactElement {
             />
           </div>
 
-          {/* Tipo de propiedad */}
           <Select
             value={filters.propertyType ?? 'all'}
             onValueChange={(value) => handleFilterChange('propertyType', value)}
@@ -165,13 +120,12 @@ export function HomePage(): React.ReactElement {
             </SelectContent>
           </Select>
 
-          {/* Tipo de operacion */}
           <Select
             value={filters.operationType ?? 'all'}
             onValueChange={(value) => handleFilterChange('operationType', value)}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Operacion" />
+              <SelectValue placeholder="Operación" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Venta y Alquiler</SelectItem>
@@ -184,7 +138,6 @@ export function HomePage(): React.ReactElement {
           </Select>
         </div>
 
-        {/* Filtros adicionales y botón de limpiar */}
         <div className="flex flex-wrap gap-4 mt-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Precio mín:</span>
@@ -212,22 +165,8 @@ export function HomePage(): React.ReactElement {
             />
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Hab. mín:</span>
-            <Input
-              type="number"
-              placeholder="0"
-              className="w-20"
-              min="0"
-              value={filters.minBedrooms ?? ''}
-              onChange={(e) =>
-                handleFilterChange('minBedrooms', e.target.value ? Number(e.target.value) : 0)
-              }
-            />
-          </div>
-
           {hasFilters && (
-            <Button variant="ghost" size="sm" onClick={handleClearFilters}>
+            <Button variant="ghost" size="sm" onClick={handleClearFilters} className="text-destructive">
               <X className="h-4 w-4 mr-1" />
               Limpiar filtros
             </Button>
@@ -235,7 +174,7 @@ export function HomePage(): React.ReactElement {
         </div>
       </div>
 
-      {/* Lista de propiedades */}
+      {/* Renderizado Condicional de la Lista */}
       {properties.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {properties.map((property) => (
@@ -243,21 +182,24 @@ export function HomePage(): React.ReactElement {
               key={property.id}
               property={property}
               onDelete={handleDelete}
+              isComparing={compareIds.includes(property.id)}
+              onCompareToggle={() => onToggleCompare(property.id)}
+              compareCount={compareIds.length}
             />
           ))}
         </div>
       ) : (
-        <div className="text-center py-12">
+        <div className="text-center py-20 border-2 border-dashed rounded-xl">
           <p className="text-muted-foreground text-lg mb-4">
-            No se encontraron propiedades
+            No se encontraron propiedades con estos criterios.
           </p>
           {hasFilters ? (
             <Button variant="outline" onClick={handleClearFilters}>
-              Limpiar filtros
+              Ver todas las propiedades
             </Button>
           ) : (
             <Button asChild>
-              <Link to="/new">Agregar primera propiedad</Link>
+              <Link to="/new">Crear mi primera propiedad</Link>
             </Button>
           )}
         </div>

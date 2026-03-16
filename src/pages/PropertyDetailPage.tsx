@@ -1,30 +1,24 @@
 // =============================================================================
 // PÁGINA: DETALLE DE PROPIEDAD - Real Estate React
 // =============================================================================
-// Página que muestra información detallada de una propiedad.
-//
-// ## useParams()
-// Hook de React Router que extrae parámetros de la URL.
-// La ruta /property/:id define un parámetro dinámico 'id'.
-// =============================================================================
 
 import type React from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Bed, Bath, Square, Calendar, Tag } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { getPropertyById, deleteProperty } from '@/lib/storage';
+
+// RUTAS RELATIVAS (corregidas para evitar errores)
+import { Button } from '../components/ui/button';
+import { Card, CardContent } from '../components/ui/card';
+import { ImageGallery } from '../components/ImageGallery'; // <-- ¡AQUÍ IMPORTAMOS LA GALERÍA!
+import { getPropertyById, deleteProperty } from '../lib/storage';
 import {
   PROPERTY_TYPE_LABELS,
   OPERATION_TYPE_LABELS,
   AMENITY_LABELS,
   type Amenity,
-} from '@/types/property';
-import { formatPrice, formatArea } from '@/lib/utils';
+} from '../types/property';
+import { formatPrice, formatArea } from '../lib/utils';
 
-/**
- * Página de detalle de una propiedad.
- */
 export function PropertyDetailPage(): React.ReactElement {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -47,9 +41,6 @@ export function PropertyDetailPage(): React.ReactElement {
     );
   }
 
-  /**
-   * Maneja la eliminación de la propiedad.
-   */
   const handleDelete = (): void => {
     if (window.confirm('¿Estás seguro de eliminar esta propiedad?')) {
       deleteProperty(property.id);
@@ -57,10 +48,10 @@ export function PropertyDetailPage(): React.ReactElement {
     }
   };
 
-  // Imagen principal o placeholder
-  const mainImage =
-    property.images[0] ??
-    `https://placehold.co/1200x600/e2e8f0/64748b?text=${encodeURIComponent(property.propertyType)}`;
+  // Preparamos las imágenes (si no hay, usamos una de relleno por defecto)
+  const imagesToDisplay = property.images && property.images.length > 0 
+    ? property.images 
+    : [`https://placehold.co/1200x600/e2e8f0/64748b?text=${encodeURIComponent(property.propertyType)}`];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -75,17 +66,16 @@ export function PropertyDetailPage(): React.ReactElement {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Columna principal */}
+        {/* Columna principal (Izquierda) */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Imagen principal */}
-          <div className="relative rounded-lg overflow-hidden">
-            <img
-              src={mainImage}
-              alt={property.title}
-              className="w-full h-[400px] object-cover"
-            />
+          
+          {/* ========================================== */}
+          {/* NUESTRA NUEVA GALERÍA EN ACCIÓN            */}
+          {/* ========================================== */}
+          <div className="relative">
+            {/* Etiqueta de Venta/Alquiler (flotante sobre la galería) */}
             <span
-              className={`absolute top-4 left-4 px-4 py-2 text-sm font-semibold rounded-full ${
+              className={`absolute top-4 left-4 z-10 px-4 py-2 text-sm font-semibold rounded-full shadow-md ${
                 property.operationType === 'venta'
                   ? 'bg-green-500 text-white'
                   : 'bg-blue-500 text-white'
@@ -93,21 +83,11 @@ export function PropertyDetailPage(): React.ReactElement {
             >
               {OPERATION_TYPE_LABELS[property.operationType]}
             </span>
-          </div>
 
-          {/* Galería de imágenes adicionales */}
-          {property.images.length > 1 && (
-            <div className="grid grid-cols-4 gap-2">
-              {property.images.slice(1).map((img, index) => (
-                <img
-                  key={index}
-                  src={img}
-                  alt={`${property.title} - Imagen ${index + 2}`}
-                  className="w-full h-24 object-cover rounded-lg"
-                />
-              ))}
-            </div>
-          )}
+            {/* Componente de Galería */}
+            <ImageGallery images={imagesToDisplay} />
+          </div>
+          {/* ========================================== */}
 
           {/* Descripción */}
           <Card>
@@ -140,9 +120,8 @@ export function PropertyDetailPage(): React.ReactElement {
           )}
         </div>
 
-        {/* Columna lateral */}
+        {/* Columna lateral (Derecha) */}
         <div className="space-y-6">
-          {/* Precio y tipo */}
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center gap-2 mb-2">
